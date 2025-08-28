@@ -75,6 +75,7 @@ benchmark hyperloglogplus-benchmark
     -- Copied from library dependencies
     , base                      >= 4.7       && < 5
     , semigroups                >= 0.18      && < 1
+    , murmur-hash               >= 0.1       && < 0.2
 
   other-modules:
     Data.HyperLogLogPlus.Benchmarks

@@ -2,17 +2,21 @@
 
 module Data.HyperLogLogPlus.Benchmarks
   (
-    benchSemigroup
-  , benchSemigroupLStrict
+    benchInserts
+  , benchInsertsLStrict
+  , benchInsertHashes
+  , benchSemigroupTwo
   , benchSize
   , benchIntersect
   , HLL
   -- * Zero-minhash variants.
-  , benchSemigroup0
-  , benchSemigroupLStrict0
+  , benchInserts0
+  , benchInsertsLStrict0
+  , benchSemigroupTwo0
   , HLL0
   ) where
 
+import Data.Digest.Murmur64 (Hash64)
 import Data.Foldable (foldl')
 import Data.HyperLogLogPlus
 import Data.Word
@@ -24,13 +28,22 @@ import Criterion            (Benchmark, bench, nf, env)
 type HLL = HyperLogLogPlus 12 2048
 type HLL0 = HyperLogLogPlus 12 0
 
-benchSemigroup :: Int -> Benchmark
-benchSemigroup n = bench (show n) $ nf f n
+benchInserts :: Int -> Benchmark
+benchInserts n = bench (show n) $ nf f n
   where f n = size (foldr insert mempty (map show [1 .. n]) :: HLL)
 
-benchSemigroupLStrict :: Int -> Benchmark
-benchSemigroupLStrict n = bench (show n) $ nf f n
+benchInsertHashes :: Int -> [Hash64] -> Benchmark
+benchInsertHashes n hs = bench (show n) $ nf f hs
+  where f hs = size (foldr insertHash mempty hs :: HLL)
+
+benchInsertsLStrict :: Int -> Benchmark
+benchInsertsLStrict n = bench (show n) $ nf f n
   where f n = size (foldl' (flip insert) mempty (map show [1 .. n]) :: HLL)
+
+benchSemigroupTwo :: Int -> HLL -> HLL -> Benchmark
+benchSemigroupTwo n hll1 hll2 = bench (show n) $ nf f (hll1, hll2)
+  where f :: (HLL, HLL) -> Word64
+        f (l, r) = size (l <> r)
 
 benchSize :: Int -> HLL -> Benchmark
 benchSize n hll = bench (show n) $ nf size hll
@@ -42,10 +55,17 @@ benchIntersect n hll1 hll2 = bench (show n) $ nf f (hll1, hll2)
   where f :: (HLL, HLL) -> Word64
         f (l, r) = intersection [l, r]
 
-benchSemigroup0 :: Int -> Benchmark
-benchSemigroup0 n = bench (show n) $ nf f n
+benchInserts0 :: Int -> Benchmark
+benchInserts0 n = bench (show n) $ nf f n
   where f n = size (foldr insert mempty (map show [1 .. n]) :: HLL0)
 
-benchSemigroupLStrict0 :: Int -> Benchmark
-benchSemigroupLStrict0 n = bench (show n) $ nf f n
+benchInsertsLStrict0 :: Int -> Benchmark
+benchInsertsLStrict0 n = bench (show n) $ nf f n
   where f n = size (foldl' (flip insert) mempty (map show [1 .. n]) :: HLL0)
+
+benchSemigroupTwo0 :: Int -> HLL0 -> HLL0 -> Benchmark
+benchSemigroupTwo0 n hll1 hll2 = bench (show n) $ nf f (hll1, hll2)
+  where f :: (HLL0, HLL0) -> Word64
+        f (l, r) = size (l <> r)
+
+

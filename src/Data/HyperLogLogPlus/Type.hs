@@ -84,10 +84,12 @@ data HyperLogLogPlus (p :: Nat) (k :: Nat) = HyperLogLogPlus
 type role HyperLogLogPlus nominal nominal
 
 instance (KnownNat k) => Semigroup (HyperLogLogPlus p k) where
-  (HyperLogLogPlus ar ah) <> (HyperLogLogPlus br bh) = HyperLogLogPlus (V.zipWith max ar br) (iterate Set.deleteMax u !! n)
+  (HyperLogLogPlus ar ah) <> (HyperLogLogPlus br bh) = HyperLogLogPlus (V.zipWith max ar br) (delNMax n u)
     where k = fromIntegral $ natVal (Proxy :: Proxy k)
           u = Set.union ah bh
           n = max 0 (Set.size u - k)
+          delNMax 0 s = s
+          delNMax x s = delNMax (x-1) (Set.deleteMax s)
   {-# INLINE (<>) #-}
 
 instance (KnownNat p, KnownNat k, 4 <= p, p <= 18) => Monoid (HyperLogLogPlus p k) where
