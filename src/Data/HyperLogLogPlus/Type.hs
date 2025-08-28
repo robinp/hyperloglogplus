@@ -77,8 +77,8 @@ import           GHC.Int
 -- >>> intersection $ [(foldr insert mempty [1 .. 15000] ::  HLL), (foldr insert mempty [12000 .. 20000] :: HLL)]
 -- 3100
 data HyperLogLogPlus (p :: Nat) (k :: Nat) = HyperLogLogPlus
-  { hllRank   :: V.Vector Int8
-  , hllMinSet :: Set Hash64
+  { hllRank   :: !(V.Vector Int8)
+  , hllMinSet :: !(Set Hash64)
   } deriving (Eq)
 
 type role HyperLogLogPlus nominal nominal
@@ -145,7 +145,7 @@ estimatedSize hll@(HyperLogLogPlus rank _)
         q =  fromIntegral nb
         nz = fromIntegral . V.length . V.filter (==0) $ rank
         s = V.sum . V.map (\r -> 2.0 ^^ (negate r)) $ rank
-        ae = (alpha nb) * (q ^ 2) * (1.0 / s)
+        ae = (alpha nb) * (q ^ (2 :: Int)) * (1.0 / s)
         e | ae < 5 * q = ae - estimatedBias ae (fromIntegral p)
           | otherwise  = ae
         h | nz > 0     = q * log (q / nz)
@@ -177,7 +177,7 @@ intersection :: forall p k . (KnownNat p, KnownNat k) => [HyperLogLogPlus p k] -
 intersection hs
   | null hs                        = 0
   | any (\hll -> size hll == 0) hs = 0
-  | otherwise                      = round $ ((fromIntegral r) / (fromIntegral n)) * (fromIntegral ts)
+  | otherwise                      = round $ ((fromIntegral r :: Double) / (fromIntegral n)) * (fromIntegral ts)
     where k = natVal (Proxy :: Proxy k)
           u = Set.unions $ map hllMinSet hs
           ts = size $ foldl1 (<>) hs
