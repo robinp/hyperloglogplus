@@ -13,6 +13,8 @@ module Data.HyperLogLogPlus.Type
     HyperLogLogPlus()
   , insert
   , insertHash
+  , batchInsert
+  , batchInsertHash
   , size
   , intersection
   , cast
@@ -21,6 +23,8 @@ module Data.HyperLogLogPlus.Type
 import           Control.Monad
 
 import           Data.HyperLogLogPlus.Config
+
+import           Data.Foldable               (foldl', traverse_)
 
 import           Data.Set                    (Set)
 import qualified Data.Set                    as Set
@@ -76,6 +80,24 @@ import           GHC.Int
 --
 -- >>> intersection $ [(foldr insert mempty [1 .. 15000] ::  HLL), (foldr insert mempty [12000 .. 20000] :: HLL)]
 -- 3100
+--
+--
+-- Performance considerations:
+--
+-- Insertion:
+--
+--  * Using 0 as 'k' MinHash precision sacrifices ability to intersect, but
+--    yields approximately 2x speedup.
+--
+--  * Using the batched inserts (with 'k' > 0) yields about 1.5x speedup.
+--
+--  * Using batched inserts when 'k' is 0 yields 8x speedup compared to the
+--    base case.
+--
+-- Semigroup append:
+--
+--   * Using 0 as 'k' yields 3x speedup.
+--
 data HyperLogLogPlus (p :: Nat) (k :: Nat) = HyperLogLogPlus
   { hllRank   :: !(V.Vector Int8)
   , hllMinSet :: !(Set Hash64)
@@ -125,6 +147,35 @@ insertHash hash hll@(HyperLogLogPlus rank minSet) = HyperLogLogPlus rank' minSet
                 | otherwise      = s
                 where s = Set.insert hash minSet
 {-# INLINE insertHash #-}
+
+-- | Insert hashable value
+batchInsert :: forall p k a . (KnownNat p, KnownNat k, Hashable64 a) => [a] -> HyperLogLogPlus p k -> HyperLogLogPlus p k
+batchInsert e = batchInsertHash (map hash64 e)
+{-# INLINABLE batchInsert #-}
+
+-- | Insert already hashed value
+batchInsertHash :: forall p k . (KnownNat p, KnownNat k) => [Hash64] -> HyperLogLogPlus p k -> HyperLogLogPlus p k
+batchInsertHash hs hll@(HyperLogLogPlus rank minSet) = HyperLogLogPlus rank' minSet'
+  where !p = fromIntegral $ pctx hll
+        !k = fromIntegral $ kctx hll
+        rank' = V.modify (\mv ->
+                  traverse_ (\hash -> do
+                    let !idx = bucketIdx p hash
+                    let !rnk = calcRank p hash
+                    old <- MV.read mv idx
+                    when (rnk > old) $ MV.write mv idx rnk
+                  ) hs
+                ) rank
+        minSet'
+            | k == 0 = minSet  -- fast-path, 50% speedup in HLL0 bench
+            | otherwise = foldl' goSet minSet hs
+        goSet ms hash =
+                let s = Set.insert hash ms
+                in if Set.size s > k
+                      then Set.deleteMax s
+                      else s
+{-# INLINABLE batchInsertHash #-}
+
 
 -- | Compute estimated size of HyperLogLogPlus. If number of inserted values is smaller than
 -- MinHash precision this will return exact value

@@ -37,6 +37,7 @@ main = do
       [ bgroup "inserts"
         [ bgroup "foldr"  [ B.benchInserts 10000,              B.benchInserts 50000]
         , bgroup "foldl'" [ B.benchInsertsLStrict 10000,       B.benchInsertsLStrict 50000]
+        , bgroup "batch"  [ B.benchInsertBatched 10000,        B.benchInsertBatched 50000]
         , bgroup "hashes" [ B.benchInsertHashes 10000 hs10k,   B.benchInsertHashes 50000 hs50k]
         ]
       , bgroup "semigroup"
@@ -49,6 +50,7 @@ main = do
       [ bgroup "inserts"
         [ bgroup "foldr"  [ B.benchInserts0 10000,           B.benchInserts0 50000]
         , bgroup "foldl'" [ B.benchInsertsLStrict0 10000,    B.benchInsertsLStrict0 50000]
+        , bgroup "batch"  [ B.benchInsertBatched0 10000,        B.benchInsertBatched0 50000]
         ]
       , bgroup "semigroup"
         [ bgroup "two"    [ B.benchSemigroupTwo0 10000 hll03 hll04, B.benchSemigroupTwo0 50000 hll05 hll06]

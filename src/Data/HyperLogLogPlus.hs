@@ -4,6 +4,8 @@ module Data.HyperLogLogPlus
   , size
   , insert
   , insertHash
+  , batchInsert
+  , batchInsertHash
   , intersection
   , cast
   ) where

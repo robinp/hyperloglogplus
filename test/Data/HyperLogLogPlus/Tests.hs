@@ -18,6 +18,7 @@ tests = testGroup "Data.HyperLogLogPlus"
     [ testCase "testMempty" testMempty
     , testCase "testSmallSet" testSmallSet
     , testCase "testBigSet" testBigSet
+    , testCase "testBatchInsert" testBatchInsert
     , testCase "testSemigroup" testSemigroup
     , testCase "testIntersection" testIntersection
     , testCase "testUpcastP" testUpcastP
@@ -37,6 +38,11 @@ testSmallSet = assertBool "" $ size (foldr insert mempty (gen [1 .. 1234]) :: HL
 testBigSet :: Assertion
 testBigSet = assertBool "" $ 49000 < n && n < 51000
   where n = size (foldr insert mempty (gen [1 .. 50000]) :: HLL)
+
+testBatchInsert :: Assertion
+testBatchInsert =
+    let xs = gen [1 .. 1234]
+    in assertBool "" $ size (foldr insert mempty xs :: HLL) == size (batchInsert xs (mempty :: HLL))
 
 testSemigroup :: Assertion
 testSemigroup = assertBool "" $ 49000 < n && n < 51000
