@@ -25,8 +25,8 @@ import           Data.HyperLogLogPlus.Config
 import           Data.Set                    (Set)
 import qualified Data.Set                    as Set
 
-import           Data.Vector                 ((!))
 import qualified Data.Vector                 as DV
+import           Data.Vector.Unboxed         ((!))
 import qualified Data.Vector.Unboxed         as V
 import qualified Data.Vector.Unboxed.Mutable as MV
 
@@ -160,17 +160,17 @@ estimatedSize hll@(HyperLogLogPlus rank _)
 -- on empirical results.
 estimatedBias :: Double -> Integer -> Double
 estimatedBias e p
-  | e <= DV.head red = DV.head bd
-  | e >  DV.last red = 0.0
+  | e <= V.head red = V.head bd
+  | e >  V.last red = 0.0
   | otherwise        = case idx of
                          Just j -> (slope * e) + intercept
                            where slope = (bd ! (j +1) - bd ! j) / (red ! (j + 1) - red ! j)
                                  intercept = bd ! (j + 1) - slope * red ! (j + 1)
                          Nothing -> 0.0
   where i = fromIntegral $ p - minP
-        red = rawEstimateData ! i
-        bd = biasData ! i
-        idx = V.find (\x -> red ! x < e && e < red ! (x + 1)) $ V.enumFromN 0 (DV.length red - 2)
+        red = rawEstimateData DV.! i  :: V.Vector Double
+        bd = biasData DV.! i          :: V.Vector Double
+        idx = V.find (\x -> red ! x < e && e < red ! (x + 1)) $ V.enumFromN 0 (V.length red - 2)
 {-#INLINE estimatedBias #-}
 
 -- | Returns an estimate of the size of the intersection
